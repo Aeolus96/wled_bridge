@@ -1,7 +1,7 @@
 import rospy
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
-import cv2
+import cv2 # Needed on arm64 systems because cv_bridge is commonly amd64
 from cv_bridge import CvBridge
 import http.server
 import socketserver

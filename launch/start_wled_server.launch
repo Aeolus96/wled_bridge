@@ -6,4 +6,3 @@
     <param name="wled_device_address" type="string" value="$(arg wled_device_address)" />
   </node>
 </launch>
-
