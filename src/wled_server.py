@@ -1,12 +1,13 @@
 import rospy
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
-import cv2 # Needed on arm64 systems because cv_bridge is commonly amd64
+import cv2  # Needed on arm64 systems because cv_bridge is commonly amd64
 from cv_bridge import CvBridge
 import http.server
 import socketserver
 import threading
 import requests
+
 
 class WLEDServerHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -16,7 +17,9 @@ class WLEDServerHandler(http.server.SimpleHTTPRequestHandler):
         print(f"Received GET request: {self.path}")
         super().do_GET()
 
+
 wled_device_address = ""  # Define wled_device_address as a global variable
+
 
 def wled_server_thread_func():
     PORT = 8080
@@ -25,6 +28,7 @@ def wled_server_thread_func():
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         print(f"Serving at port {PORT} for WLED device at {wled_device_address}")
         httpd.serve_forever()
+
 
 def string_callback(msg):
     global wled_device_address
@@ -45,48 +49,87 @@ def string_callback(msg):
                 {
                     "id": 0,
                     "fx": 122,  # 122 corresponds to the scrolling text effect
-                    "sx": 200,    # Relative effect speed
+                    "sx": 200,  # Relative effect speed
                     "ix": 128,  # Effect intensity - Y Offset
-                    "c1": 0,    # Effect custom slider 1 - Trail
+                    "c1": 0,  # Effect custom slider 1 - Trail
                     "c2": 128,  # Effect custom slider 2 - Font size
-                    "c3": 0,   # Effect custom slider 3 - ?
+                    "c3": 0,  # Effect custom slider 3 - ?
                     "n": msg.data,  # Set the text content
                 }
             ],
             # Additional global settings
-            "on": True,         # WLED on/off state
-            "bri": 128,         # Brightness (0 to 255)
-            "cct": 127,         # White spectrum color temperature (0 to 255 or 1900 to 10091)
-            "pal": 0,           # ID of the color palette
-            "sel": True,        # Segment selected state
-            "rev": False,       # Segment flip state
-            "mi": False,        # Segment mirror state
-            "rY": False,        # Segment Rotate state
-            "mY": False,        # Segment Mirror state
-            "tp": False,        # Effect option 1
-            "o1": False,        # Effect option 2
-            "o2": False,        # Effect option 3
-            "o3": False,        # Effect option 4
-            "frz": False,       # Freeze/unfreeze the current effect
-            "m12": 0,           # Setting of segment field 'Expand 1D FX'
-            "si": 0             # Setting of the sound simulation type for audio enhanced effects
+            "on": True,  # WLED on/off state
+            "bri": 128,  # Brightness (0 to 255)
+            "cct": 127,  # White spectrum color temperature (0 to 255 or 1900 to 10091)
+            "pal": 0,  # ID of the color palette
+            "sel": True,  # Segment selected state
+            "rev": False,  # Segment flip state
+            "mi": False,  # Segment mirror state
+            "rY": False,  # Segment Rotate state
+            "mY": False,  # Segment Mirror state
+            "tp": False,  # Effect option 1
+            "o1": False,  # Effect option 2
+            "o2": False,  # Effect option 3
+            "o3": False,  # Effect option 4
+            "frz": False,  # Freeze/unfreeze the current effect
+            "m12": 0,  # Setting of segment field 'Expand 1D FX'
+            "si": 0,  # Setting of the sound simulation type for audio enhanced effects
         }
 
-        # Send the JSON payload to the WLED device
-        try:
-            response = requests.post(f"http://{wled_device_address}/json/state", json=payload)
-            response.raise_for_status()
-            rospy.loginfo(f"Command sent successfully to WLED device. Response: {response.text}")
-        except requests.RequestException as e:
-            rospy.logerr(f"Error sending command to WLED device: {e}")
+    # Send the JSON payload to the WLED device
+    try:
+        response = requests.post(f"http://{wled_device_address}/json/state", json=payload)
+        response.raise_for_status()
+        rospy.loginfo(f"Command sent successfully to WLED device. Response: {response.text}")
+    except requests.RequestException as e:
+        rospy.logerr(f"Error sending command to WLED device: {e}")
+
 
 def image_callback(msg):
     # Handle Image messages (e.g., update served image)
     rospy.loginfo("Received Image message")
+
     # Convert Image message to OpenCV format using CvBridge
     bridge = CvBridge()
     cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-    # Your image processing logic here
+
+    # Resize the image to match the number of LEDs in your WLED strip
+    cv_image_resized = cv2.resize(cv_image, (32, 8))
+
+    # Initialize an empty list to store LED index and hex color values
+    led_colors = []
+
+    # Iterate through each pixel in the resized image
+    for row in range(8):
+        for col in range(32):
+            # Extract RGB values from the pixel
+            pixel_color = cv_image_resized[row, col]
+            r, g, b = pixel_color
+
+            # Convert RGB to hex
+            hex_color = "#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
+
+            # Append LED index and hex color to the list
+            led_colors.extend([col + row * 32, hex_color])
+
+    # Construct the JSON payload
+    payload = {
+        "seg": {
+            "i": led_colors,  # Individual LED hex color values
+        },
+        "on": True,  # WLED on/off state
+        "bri": 128,  # Brightness (0 to 255)
+        # Additional settings...
+    }
+
+    # Send the JSON payload to the WLED device
+    try:
+        response = requests.post(f"http://{wled_device_address}/json/state", json=payload)
+        response.raise_for_status()
+        rospy.loginfo(f"Image sent successfully to WLED device. Response: {response.text}")
+    except requests.RequestException as e:
+        rospy.logerr(f"Error sending image to WLED device: {e}")
+
 
 def main():
     global wled_device_address
@@ -111,6 +154,6 @@ def main():
         # Perform cleanup actions here if needed
         wled_server_thread.join()  # Wait for the server thread to finish
 
+
 if __name__ == "__main__":
     main()
-
