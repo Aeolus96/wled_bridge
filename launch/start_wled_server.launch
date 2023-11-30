@@ -1,6 +1,6 @@
 <!-- File: catkin_ws/src/wled_bridge/launch/start_wled_server.launch -->
 <launch>
-  <arg name="wled_device_address" default="192.168.1.19" /> <!-- WLED IP Address -->
+  <arg name="wled_device_address" default="4.3.2.1" /> <!-- WLED IP Address / Default AP mode address -->
 
   <node pkg="wled_bridge" type="wled_server.py" name="wled_server_node" output="screen">
     <param name="wled_device_address" type="string" value="$(arg wled_device_address)" />
