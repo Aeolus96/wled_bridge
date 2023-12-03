@@ -14,7 +14,8 @@ This is a ROS (Robot Operating System) node for controlling a WLED device using 
 ## Prerequisites
 
 - ROS (Noetic preferred) installed on your system. [ROS Installation Instructions](http://wiki.ros.org/ROS/Installation)
-- WLED release v0.14.0-b1 or later
+- WLED release [v0.14.0-b1](https://github.com/Aircoookie/WLED/releases/tag/v0.14.0-b1) or later
+- I'm using WS2812B panels from BTF-LIGHTING with WLED Controller from Domestic Automation LLC for testing. Follow instruction at [WLED](https://kno.wled.ge/) for Hardware Configuration.
 
 ## Installation
 
@@ -33,36 +34,24 @@ This is a ROS (Robot Operating System) node for controlling a WLED device using 
 
 ## Usage
 
-1. Launch the WLED control node:
+Launch the WLED control node:
 
-    - Source ROS
-    - Update the WLED Device IP address (x.x.x.x) in the launch file or via command line argument
+- Source ROS
+- Update the WLED Device IP address (x.x.x.x) in the launch file or via command line argument
 
-    ```bash
-    roslaunch wled_control_node wled_control.launch
-    ```
+```bash
+roslaunch wled_control_node wled_control.launch
 
-    OR
+# OR Use with IPv4
 
-    ```bash
-    roslaunch wled_control_node wled_control.launch wled_device_address:=<Device-IP>
-    ```
-
-2. Send ROS messages to control the WLED device:
-
-    - Update ticker text:
-
-        ```bash
-        rostopic pub /wled_bridge/ticker_text std_msgs/String "your_text_here"
-        ```
-
-    - Other ROS messages for controlling lights and features.
+roslaunch wled_control_node wled_control.launch wled_device_address:=<Device-IP>
+```
 
 ## ROS Messages
 
 ### `/wled_bridge/ticker_text` (std_msgs/String)
 
-This topic is used to update the ticker text on the WLED device.
+This topic is used to update the ticker text (scrolling right to left) on the WLED device.
 
 Example:
 
@@ -70,7 +59,10 @@ Example:
 rostopic pub /wled_bridge/ticker_text std_msgs/String "Hello, WLED!"
 ```
 
-More features will be added as the project develops.
+### `/wled_bridge/image` (sensor_msgs/Image)
+
+This topic takes ROS Image messages, uses OpenCV to resize to them to fit the LED Matrix size defined in Dynamic Recofigure. Default is `32x8`.
+> NOTE: Support for other LED segment types or WLED effects is limited due to the scope of this project
 
 ## Contributing
 
