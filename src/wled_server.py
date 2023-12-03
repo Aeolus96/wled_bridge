@@ -1,4 +1,6 @@
 import rospy
+from dynamic_reconfigure.server import Server
+from wled_bridge.cfg import WledBridgeParamsConfig
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 import cv2  # Needed on arm64 systems because cv_bridge is commonly amd64
@@ -7,6 +9,13 @@ import http.server
 import socketserver
 import threading
 import requests
+
+# Define global variables
+wled_device_address = ""  # Define wled_device_address as a global variable
+matrix_width = 32
+matrix_height = 8
+brightness = 128
+debug_mode = False
 
 
 class WLEDServerHandler(http.server.SimpleHTTPRequestHandler):
@@ -18,9 +27,6 @@ class WLEDServerHandler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
 
-wled_device_address = ""  # Define wled_device_address as a global variable
-
-
 def wled_server_thread_func():
     PORT = 8080
     Handler = WLEDServerHandler
@@ -30,10 +36,24 @@ def wled_server_thread_func():
         httpd.serve_forever()
 
 
+def dyn_rcfg_callback(config, level):
+    global matrix_width, matrix_height, debug_mode, brightness
+    # Update dynamic parameters based on reconfiguration
+    matrix_width = config["matrix_width"]
+    matrix_height = config["matrix_height"]
+    brightness = config["brightness"]
+    debug_mode = config["debug"]
+    return config
+
+
+# Handle String messages (e.g., update ticker text or control lights)
 def string_callback(msg):
-    global wled_device_address
-    # Handle String messages (e.g., update ticker text or control lights)
+    rospy.loginfo("Received String message")
     command = msg.data.lower()
+
+    if debug_mode:
+        # Print the received message
+        rospy.loginfo(f"Received String: {command}")
 
     if command == "on":
         # Command to turn on WLED
@@ -59,7 +79,7 @@ def string_callback(msg):
             ],
             # Additional global settings
             "on": True,  # WLED on/off state
-            "bri": 128,  # Brightness (0 to 255)
+            "bri": brightness,  # Brightness (0 to 255)
             "cct": 127,  # White spectrum color temperature (0 to 255 or 1900 to 10091)
             "pal": 0,  # ID of the color palette
             "sel": True,  # Segment selected state
@@ -85,40 +105,49 @@ def string_callback(msg):
         rospy.logerr(f"Error sending command to WLED device: {e}")
 
 
+# Handle Image messages (e.g., update served image into WLED matrix)
 def image_callback(msg):
-    # Handle Image messages (e.g., update served image)
     rospy.loginfo("Received Image message")
-
     # Convert Image message to OpenCV format using CvBridge
     bridge = CvBridge()
     cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
 
     # Resize the image to match the number of LEDs in your WLED strip
-    cv_image_resized = cv2.resize(cv_image, (32, 8))
+    cv_image_resized = cv2.resize(cv_image, (matrix_width, matrix_height))
+
+    if debug_mode:
+        # Resize the image 10x in all dimensions
+        display_image = cv2.resize(cv_image_resized, (matrix_width * 10, matrix_height * 10))
+        cv2.imshow("Image sent to WLED", display_image)
+        cv2.waitKey(1)
+    else:
+        cv2.destroyAllWindows()  # Close the imshow window
 
     # Initialize an empty list to store LED index and hex color values
     led_colors = []
 
     # Iterate through each pixel in the resized image
-    for row in range(8):
-        for col in range(32):
+    for row in range(matrix_height):
+        for col in range(matrix_width):
             # Extract RGB values from the pixel
             pixel_color = cv_image_resized[row, col]
             r, g, b = pixel_color
 
-            # Convert RGB to hex
-            hex_color = "#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
+            # Convert BGR to hex
+            hex_color = "{:02x}{:02x}{:02x}".format(int(b), int(g), int(r))
 
             # Append LED index and hex color to the list
-            led_colors.extend([col + row * 32, hex_color])
+            led_colors.extend([col + row * matrix_width, hex_color])
 
     # Construct the JSON payload
     payload = {
-        "seg": {
-            "i": led_colors,  # Individual LED hex color values
-        },
+        "seg": [
+            {
+                "i": led_colors,  # Individual LED hex color values
+            }
+        ],
         "on": True,  # WLED on/off state
-        "bri": 128,  # Brightness (0 to 255)
+        "bri": brightness,  # Brightness (0 to 255)
         # Additional settings...
     }
 
@@ -130,10 +159,15 @@ def image_callback(msg):
     except requests.RequestException as e:
         rospy.logerr(f"Error sending image to WLED device: {e}")
 
+    cv2.destroyAllWindows()  # Close the imshow window
+
 
 def main():
     global wled_device_address
     rospy.init_node("wled_server_node")
+
+    # Load the dynamic reconfigure server
+    srv = Server(WledBridgeParamsConfig, dyn_rcfg_callback)
 
     # Retrieve WLED device address from the parameter server
     wled_device_address = rospy.get_param("~wled_device_address", "localhost")
