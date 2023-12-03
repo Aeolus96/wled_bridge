@@ -25,7 +25,7 @@ class WLEDServerHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=".", **kwargs)
 
     def do_GET(self):
-        print(f"Received GET request: {self.path}")
+        rospy.loginfo(f"Received GET request: {self.path}")
         super().do_GET()
 
 
@@ -33,14 +33,12 @@ def wled_server_thread_func():
     PORT = 8080
     Handler = WLEDServerHandler
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
-        print(f"Serving at port {PORT} for WLED device at {wled_device_address}")
-        try:
-            while not shutdown_event.is_set():
-                httpd.handle_request()
-        except KeyboardInterrupt:
-            print("Received KeyboardInterrupt. Shutting down the server...")
-
-    print("WLED server thread exiting")
+        rospy.loginfo(f"Serving at port {PORT} for WLED device at {wled_device_address}")
+        while not shutdown_event.is_set():
+            httpd.handle_request()
+            time.sleep(1)  # Sleep for 1 second to avoid flooding
+        httpd.shutdown()
+    rospy.loginfo("WLED server thread exited...")
 
 
 def dyn_rcfg_callback(config, level):
@@ -59,7 +57,6 @@ def string_callback(msg):
     command = msg.data.lower()
 
     if debug_mode:
-        # Print the received message
         rospy.loginfo(f"Received String: {command}")
 
     if command == "on":
@@ -124,9 +121,11 @@ def image_callback(msg):
 
     if debug_mode:
         # Resize the image 10x in all dimensions
-        display_image = cv2.resize(cv_image_resized, (matrix_width * 10, matrix_height * 10))
+        display_image = cv2.resize(
+            cv_image_resized, (matrix_width * 10, matrix_height * 10), interpolation=cv2.INTER_AREA
+        )
         cv2.imshow("Image sent to WLED", display_image)
-        cv2.waitKey(1)
+        cv2.waitKey(0)
     else:
         cv2.destroyAllWindows()  # Close the imshow window
 
@@ -169,7 +168,7 @@ def image_callback(msg):
 
 def main():
     global wled_device_address
-    rospy.init_node("wled_server_node")
+    rospy.init_node("wled_server_node", disable_signals=True)
 
     # Load the dynamic reconfigure server
     srv = Server(WledBridgeParamsConfig, dyn_rcfg_callback)
@@ -179,7 +178,7 @@ def main():
     rospy.loginfo(f"WLED device address: {wled_device_address}")
 
     # Start WLED server thread with the retrieved address
-    wled_server_thread = threading.Thread(target=wled_server_thread_func)
+    wled_server_thread = threading.Thread(target=wled_server_thread_func, daemon=True)
     wled_server_thread.start()
 
     # Subscribe to String and Image messages
@@ -190,11 +189,11 @@ def main():
         rospy.spin()
     except KeyboardInterrupt:
         rospy.loginfo("Terminating WLED server...")
-
-        # Set the shutdown event to signal threads to stop
-        shutdown_event.set()
-        # Perform cleanup actions here if needed
+        shutdown_event.set()  # Set the shutdown event to signal threads to stop
         wled_server_thread.join()  # Wait for the server thread to finish
+        cv2.destroyAllWindows()  # Close the imshow windows
+        time.sleep(1)  # Sleep for 1 second to give time for the server thread to finish
+        rospy.signal_shutdown("KeyboardInterrupt detected")  # Shut down the ROS node
 
 
 if __name__ == "__main__":
