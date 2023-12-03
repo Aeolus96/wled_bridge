@@ -9,6 +9,7 @@ import http.server
 import socketserver
 import threading
 import requests
+import time
 
 # Define global variables
 wled_device_address = ""  # Define wled_device_address as a global variable
@@ -16,6 +17,7 @@ matrix_width = 32
 matrix_height = 8
 brightness = 128
 debug_mode = False
+shutdown_event = threading.Event()  # Event to signal thread termination
 
 
 class WLEDServerHandler(http.server.SimpleHTTPRequestHandler):
@@ -30,10 +32,15 @@ class WLEDServerHandler(http.server.SimpleHTTPRequestHandler):
 def wled_server_thread_func():
     PORT = 8080
     Handler = WLEDServerHandler
-
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         print(f"Serving at port {PORT} for WLED device at {wled_device_address}")
-        httpd.serve_forever()
+        try:
+            while not shutdown_event.is_set():
+                httpd.handle_request()
+        except KeyboardInterrupt:
+            print("Received KeyboardInterrupt. Shutting down the server...")
+
+    print("WLED server thread exiting")
 
 
 def dyn_rcfg_callback(config, level):
@@ -159,8 +166,6 @@ def image_callback(msg):
     except requests.RequestException as e:
         rospy.logerr(f"Error sending image to WLED device: {e}")
 
-    cv2.destroyAllWindows()  # Close the imshow window
-
 
 def main():
     global wled_device_address
@@ -185,6 +190,9 @@ def main():
         rospy.spin()
     except KeyboardInterrupt:
         rospy.loginfo("Terminating WLED server...")
+
+        # Set the shutdown event to signal threads to stop
+        shutdown_event.set()
         # Perform cleanup actions here if needed
         wled_server_thread.join()  # Wait for the server thread to finish
 
