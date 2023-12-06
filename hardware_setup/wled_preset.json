@@ -1,0 +1,106 @@
+{
+    "0": {},
+    "1": {
+        "on": true,
+        "bri": 128,
+        "transition": 7,
+        "mainseg": 0,
+        "seg": [
+            {
+                "id": 0,
+                "start": 0,
+                "stop": 32,
+                "startY": 0,
+                "stopY": 8,
+                "grp": 1,
+                "spc": 0,
+                "of": 0,
+                "on": true,
+                "frz": false,
+                "bri": 51,
+                "cct": 127,
+                "col": [
+                    [
+                        255,
+                        160,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0,
+                        0
+                    ]
+                ],
+                "fx": 122,
+                "sx": 5,
+                "ix": 128,
+                "pal": 0,
+                "c1": 0,
+                "c2": 128,
+                "c3": 16,
+                "sel": true,
+                "rev": true,
+                "mi": false,
+                "rY": true,
+                "mY": false,
+                "tp": false,
+                "o1": false,
+                "o2": false,
+                "o3": false,
+                "si": 0,
+                "m12": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            },
+            {
+                "stop": 0
+            }
+        ],
+        "n": "Scrolling Text"
+    }
+}

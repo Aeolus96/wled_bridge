@@ -15,7 +15,8 @@ This is a ROS (Robot Operating System) node for controlling a WLED device using 
 
 - ROS (Noetic preferred) installed on your system. [ROS Installation Instructions](http://wiki.ros.org/ROS/Installation)
 - WLED release [v0.14.0-b1](https://github.com/Aircoookie/WLED/releases/tag/v0.14.0-b1) or later
-- I'm using WS2812B panels from BTF-LIGHTING with WLED Controller from Domestic Automation LLC for testing. Follow instruction at [WLED](https://kno.wled.ge/) for Hardware Configuration.
+- I'm using 32x8 WS2812B panels from BTF-LIGHTING with WLED Controller from Domestic Automation LLC for testing
+- Follow instruction at [WLED](https://kno.wled.ge/) for Hardware Configuration and check the hardware_setup folder for example configurations that work on the test hardware mentioned above.
 
 ## Installation
 
