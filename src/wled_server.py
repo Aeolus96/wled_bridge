@@ -1,15 +1,17 @@
-import rospy
-from dynamic_reconfigure.server import Server
-from wled_bridge.cfg import WledBridgeParamsConfig
-from std_msgs.msg import String
-from sensor_msgs.msg import Image
-import cv2  # Needed on arm64 systems because cv_bridge is commonly amd64
-from cv_bridge import CvBridge
 import http.server
 import socketserver
 import threading
-import requests
 import time
+
+import cv2  # Needed on arm64 systems because cv_bridge is commonly amd64
+import requests
+import rospy
+from cv_bridge import CvBridge
+from dynamic_reconfigure.server import Server
+from sensor_msgs.msg import Image
+from std_msgs.msg import String
+
+from wled_bridge.cfg import WledBridgeParamsConfig
 
 # Define global variables
 wled_device_address = ""  # Define wled_device_address as a global variable
@@ -77,7 +79,7 @@ def string_callback(msg):
                     "ix": 128,  # Effect intensity - Y Offset
                     "c1": 0,  # Effect custom slider 1 - Trail
                     "c2": 128,  # Effect custom slider 2 - Font size
-                    "c3": 0,  # Effect custom slider 3 - ?
+                    "c3": 16,  # Effect custom slider 3 - ?
                     "n": msg.data,  # Set the text content
                 }
             ],
@@ -126,8 +128,6 @@ def image_callback(msg):
         )
         cv2.imshow("Image sent to WLED", display_image)
         cv2.waitKey(0)
-    else:
-        cv2.destroyAllWindows()  # Close the imshow window
 
     # Initialize an empty list to store LED index and hex color values
     led_colors = []
