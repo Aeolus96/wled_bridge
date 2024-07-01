@@ -23,7 +23,7 @@ This is a ROS (Robot Operating System) node for controlling a WLED device using 
 1. Clone the repository to your ROS workspace:
 
     ```bash
-    git clone https://github.com/Aeolus96/wled_control_node.git
+    git clone https://github.com/Aeolus96/wled_bridge.git
     ```
 
 2. Build the package:
